@@ -23,8 +23,8 @@ A Node.js + TypeScript backend service for managing user notification preference
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd notification-preferance
+git clone https://github.com/AdityaKumbhar21/notification_preference_service_api.git
+cd notification_preference_service_api
 
 # Install dependencies
 npm install
@@ -55,6 +55,24 @@ npx prisma db push
 # (Optional) Open Prisma Studio to view data
 npx prisma studio
 ```
+
+### Initial Setup - Create Admin User
+
+⚠️ **Important**: You need to manually create the first admin user before using the API.
+
+1. Open Prisma Studio:
+   ```bash
+   npx prisma studio
+   ```
+
+2. Create an **Organization** first
+
+3. Create a **User** with:
+   - `email`: your admin email
+   - `role`: `ADMIN`
+   - `organizationId`: the organization ID from step 2
+
+4. Use this admin user's ID in the `x-user-id` header for admin-protected routes.
 
 ### Running the Server
 
