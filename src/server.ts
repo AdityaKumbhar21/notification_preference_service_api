@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv"
 import userRouter from "./routes/user";
 import topicRouter from "./routes/topics";
@@ -13,20 +12,8 @@ dotenv.config()
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-
-app.use(cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "x-user-id"]
-}));
-
 app.use(express.json())
 app.use(express.urlencoded({extended: true}))
-
-
-app.get("/health", (req, res) => {
-    res.status(200).json({ status: "ok" });
-});
 
 app.use('/orgs', orgRouter);
 app.use('/users', userRouter);
