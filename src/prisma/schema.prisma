@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  users     User[]
+  groups    Group[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  role            Role              @default(CUSTOMER)
+  organizationId  String
+  organization    Organization      @relation(fields: [organizationId], references: [id])
+  groupPreferences UserGroupPref[]
+  topicPreferences UserTopicPref[]
+  createdAt       DateTime          @default(now())
+}
+
+model Group {
+  id              String          @id @default(uuid())
+  name            String
+  organizationId  String
+  organization    Organization    @relation(fields: [organizationId], references: [id])
+  topics          Topic[]
+  userPreferences UserGroupPref[]
+  createdAt       DateTime        @default(now())
+
+  @@unique([organizationId, name])
+}
+
+model Topic {
+  id              String          @id @default(uuid())
+  name            String
+  groupId         String
+  group           Group           @relation(fields: [groupId], references: [id])
+  userPreferences UserTopicPref[]
+
+  @@unique([groupId, name])
+}
+
+model UserGroupPref {
+  userId    String
+  groupId   String
+  enabled   Boolean @default(true)  // Default: group enabled
+
+  user      User    @relation(fields: [userId], references: [id])
+  group     Group   @relation(fields: [groupId], references: [id])
+
+  @@id([userId, groupId])
+}
+
+model UserTopicPref {
+  userId   String
+  topicId  String
+  channel  Channel
+  enabled  Boolean @default(false)  
+  user     User    @relation(fields: [userId], references: [id])
+  topic    Topic   @relation(fields: [topicId], references: [id])
+
+  @@id([userId, topicId, channel])
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+  CHAT
+  WHATSAPP
+}
