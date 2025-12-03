@@ -128,7 +128,7 @@ After importing, you need to set the collection variables:
 | Variable | Initial Value | Description |
 |----------|---------------|-------------|
 | `baseUrl` | `http://localhost:3000` | API base URL |
-| `adminUserId` | *(your admin user ID)* | **Required** - Get from Prisma Studio after creating admin |
+| `adminUserId` | *(auto-filled)* | Auto-saved when you run Bootstrap request |
 | `customerUserId` | *(auto-filled)* | Auto-saved when you create a customer |
 | `orgId` | *(auto-filled)* | Auto-saved when you create an organization |
 | `groupId` | *(auto-filled)* | Auto-saved when you create a group |
