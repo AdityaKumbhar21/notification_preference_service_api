@@ -58,21 +58,24 @@ npx prisma studio
 
 ### Initial Setup - Create Admin User
 
-⚠️ **Important**: You need to manually create the first admin user before using the API.
+You can create the first admin user using the bootstrap API (no authentication required):
 
-1. Open Prisma Studio:
-   ```bash
-   npx prisma studio
-   ```
+```bash
+# Step 1: Create an organization first
+curl -X POST http://localhost:3000/orgs \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Your Organization"}'
 
-2. Create an **Organization** first
+# Step 2: Create admin user (use the orgId from step 1)
+curl -X POST http://localhost:3000/users/bootstrap/admin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@yourorg.com",
+    "organizationId": "<org-id-from-step-1>"
+  }'
+```
 
-3. Create a **User** with:
-   - `email`: your admin email
-   - `role`: `ADMIN`
-   - `organizationId`: the organization ID from step 2
-
-4. Use this admin user's ID in the `x-user-id` header for admin-protected routes.
+The response will include the admin user ID - use this in the `x-user-id` header for admin-protected routes.
 
 ### Running the Server
 
@@ -96,6 +99,117 @@ Server runs on `http://localhost:3000`
 | `npm run dev` | `nodemon --exec tsx src/server.ts` | Development with auto-reload on file changes |
 | `npm start` | `tsx src/server.ts` | Start the server |
 | `npm run build` | `tsc` | Compile TypeScript to JavaScript |
+
+---
+
+## Postman Collection
+
+A comprehensive Postman collection is included for testing all API endpoints.
+
+### Collection File
+
+📁 `postman_collection.json` - Located in the project root directory
+
+### Import Steps
+
+1. **Open Postman**
+2. Click **Import** button (top-left)
+3. Select **File** → Choose `postman_collection.json` from the project root
+4. The collection "Notification Preference Service API" will be imported
+
+### Configure Variables
+
+After importing, you need to set the collection variables:
+
+1. Click on the collection name **"Notification Preference Service API"**
+2. Go to **Variables** tab
+3. Set the following variables:
+
+| Variable | Initial Value | Description |
+|----------|---------------|-------------|
+| `baseUrl` | `http://localhost:3000` | API base URL |
+| `adminUserId` | *(your admin user ID)* | **Required** - Get from Prisma Studio after creating admin |
+| `customerUserId` | *(auto-filled)* | Auto-saved when you create a customer |
+| `orgId` | *(auto-filled)* | Auto-saved when you create an organization |
+| `groupId` | *(auto-filled)* | Auto-saved when you create a group |
+| `topicId` | *(auto-filled)* | Auto-saved when you create a topic |
+
+### Getting the Admin User ID
+
+**Option 1: Use Bootstrap API (Recommended)**
+1. Start the server: `npm run dev`
+2. Run the **"Create Organization"** request first
+3. Run the **"Bootstrap - Create First Admin"** request
+4. The response contains the admin ID - it's auto-saved to `adminUserId` variable
+
+**Option 2: Use Prisma Studio**
+1. Open Prisma Studio: `npx prisma studio`
+2. Create an Organization
+3. Create a User with role `ADMIN`
+4. Copy the User ID and paste in Postman's `adminUserId` variable
+
+### Running the Collection
+
+Execute requests in order for proper testing flow:
+
+```
+0. Setup (Run First!) ⭐
+   └── Step 1: Create Organization (saves orgId)
+   └── Step 2: Bootstrap - Create First Admin (saves adminUserId)
+
+1. Organizations
+   └── Create Organization
+   └── Get Customers by Organization
+
+2. Users
+   └── Bootstrap - Create First Admin (No Auth)
+   └── Create Customer User (saves customerUserId)
+
+3. Groups
+   └── Create Group - Account & Security (saves groupId)
+   └── Create Group - Marketing
+   └── Create Group - Product Updates
+   └── Get All Groups with Topics
+
+4. Topics
+   └── Create Topic - Billing (saves topicId)
+   └── Create Topic - Login Alerts
+   └── Create Topic - Password Changes
+
+5. Preferences
+   └── Enable Group for Customer
+   └── Enable Topic Channel - EMAIL
+   └── Enable Topic Channel - SMS
+   └── Disable Topic Channel - PUSH
+   └── Get User Preferences (Structured)
+
+6. Decision API Tests (7 test cases)
+   └── Test 1: Group Enabled + Channel Enabled → allowed: true
+   └── Test 2: Group Enabled + Channel Disabled → allowed: false
+   └── Test 3: No Preference Set → allowed: false
+   └── Test 4: Group Disabled → allowed: false (run "Disable Group" first)
+   └── Test 5: Invalid User → allowed: false
+   └── Test 6: Invalid Topic → allowed: false
+   └── Test 7: Invalid Channel → allowed: false
+
+7. Error Cases
+   └── Create User without Admin Auth → 401
+   └── Create Group as Customer → 403
+   └── Duplicate Organization → 409
+   └── Set Preference as Admin → 403
+```
+
+### Decision API Test Cases Summary
+
+| # | Scenario | Expected | Description |
+|---|----------|----------|-------------|
+| 1 | Group ✅ + Channel ✅ | `allowed: true` | Both enabled - notification sent |
+| 2 | Group ✅ + Channel ❌ | `allowed: false` | Channel explicitly disabled |
+| 3 | No preference set | `allowed: false` | Default blocked behavior |
+| 4 | Group ❌ | `allowed: false` | Group overrides topic settings |
+| 5 | Invalid user | `allowed: false` | User doesn't exist |
+| 6 | Invalid topic | `allowed: false` | Topic doesn't exist |
+| 7 | Invalid channel | `allowed: false` | Channel not in enum |
 
 ---
 
@@ -232,6 +346,7 @@ Organization (1) ──────< (N) User
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
+| POST | `/users/bootstrap/admin` | Create first admin (no auth) | - |
 | POST | `/users` | Create user | ADMIN |
 
 ### Groups

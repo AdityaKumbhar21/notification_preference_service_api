@@ -7,6 +7,8 @@ const userRouter = Router();
 
 const userController = container.get<UserController>(TYPES.UserController);
 
+
+userRouter.post("/bootstrap/admin", (req, res) => userController.createFirstAdmin(req, res));
 userRouter.post("/", requireRole("ADMIN"), (req, res) => userController.createUser(req, res));
 
 export default userRouter;

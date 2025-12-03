@@ -1,0 +1,949 @@
+{
+	"info": {
+		"_postman_id": "notification-preference-api",
+		"name": "Notification Preference Service API",
+		"description": "API collection for Notification Preference Service - manages user notification preferences across organizations, groups, topics, and channels.\n\n## Quick Start\n1. Run 'Create Organization' request\n2. Run 'Bootstrap - Create First Admin' request (auto-saves adminUserId)\n3. Run the remaining requests in order\n\n## Decision Logic\n- Group disabled → blocked (regardless of topic settings)\n- Group enabled + channel enabled → allowed\n- Group enabled + channel disabled → blocked\n- No preference set → blocked (default)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "adminUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "customerUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orgId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "groupId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "topicId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "0. Setup (Run First)",
+			"item": [
+				{
+					"name": "Step 1: Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('orgId', jsonData.data.id);",
+									"    console.log('✅ orgId saved:', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Acme Corporation\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orgs",
+							"host": ["{{baseUrl}}"],
+							"path": ["orgs"]
+						},
+						"description": "**RUN THIS FIRST!**\n\nCreates a new organization. The organization ID will be automatically saved to the `orgId` variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Step 2: Bootstrap - Create First Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('adminUserId', jsonData.data.id);",
+									"    console.log('✅ adminUserId saved:', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@acme.com\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/bootstrap/admin",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "bootstrap", "admin"]
+						},
+						"description": "**RUN THIS SECOND!**\n\nCreates the first admin user for the organization. No authentication required.\n\n⚠️ This endpoint only allows ONE admin per organization. If admin exists, it returns the existing admin ID.\n\nThe admin ID is automatically saved to `adminUserId` variable."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "1. Organizations",
+			"item": [
+				{
+					"name": "Create Organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('orgId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Acme Corporation\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orgs",
+							"host": ["{{baseUrl}}"],
+							"path": ["orgs"]
+						},
+						"description": "Creates a new organization. The organization ID will be saved for subsequent requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customers by Organization",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/orgs/{{orgId}}/customers",
+							"host": ["{{baseUrl}}"],
+							"path": ["orgs", "{{orgId}}", "customers"]
+						},
+						"description": "Fetches all customers (users with CUSTOMER role) for a given organization."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Users",
+			"item": [
+				{
+					"name": "Bootstrap - Create First Admin (No Auth)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('adminUserId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@acme.com\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/bootstrap/admin",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "bootstrap", "admin"]
+						},
+						"description": "Creates the first admin user without authentication. Only ONE admin per organization allowed."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Customer User (Requires Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('customerUserId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"customer@acme.com\",\n    \"organizationId\": \"{{orgId}}\",\n    \"role\": \"CUSTOMER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["users"]
+						},
+						"description": "Creates a new user. Requires Admin authentication via x-user-id header.\n\nRoles: ADMIN or CUSTOMER"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Another Admin User (Requires Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin2@acme.com\",\n    \"organizationId\": \"{{orgId}}\",\n    \"role\": \"ADMIN\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["users"]
+						},
+						"description": "Creates another admin user. The first admin must be created via Prisma Studio."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Groups",
+			"item": [
+				{
+					"name": "Create Group - Account & Security (Requires Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('groupId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Account & Security\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/groups/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["groups", "create"]
+						},
+						"description": "Creates a notification group. Only admins can create groups."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group - Marketing (Requires Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Marketing\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/groups/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["groups", "create"]
+						},
+						"description": "Creates another notification group for marketing notifications."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group - Product Updates (Requires Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Product Updates\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/groups/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["groups", "create"]
+						},
+						"description": "Creates a group for product update notifications."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Groups with Topics (Requires Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/groups/org/{{orgId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["groups", "org", "{{orgId}}"]
+						},
+						"description": "Fetches all groups and their topics for an organization."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Topics",
+			"item": [
+				{
+					"name": "Create Topic - Billing (Requires Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('topicId', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"billing\",\n    \"groupId\": \"{{groupId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/topics/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["topics", "create"]
+						},
+						"description": "Creates a topic under a group. Each topic belongs to exactly one group."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Topic - Login Alerts (Requires Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"login_alerts\",\n    \"groupId\": \"{{groupId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/topics/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["topics", "create"]
+						},
+						"description": "Creates login_alerts topic under Account & Security group."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Topic - Password Changes (Requires Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"password_changes\",\n    \"groupId\": \"{{groupId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/topics/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["topics", "create"]
+						},
+						"description": "Creates password_changes topic under Account & Security group."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Preferences",
+			"item": [
+				{
+					"name": "Enable Group for Customer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"groupId\": \"{{groupId}}\",\n    \"enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "groups"]
+						},
+						"description": "Enables/disables a group for a customer. Only customers can set their preferences."
+					},
+					"response": []
+				},
+				{
+					"name": "Disable Group for Customer",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"groupId\": \"{{groupId}}\",\n    \"enabled\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "groups"]
+						},
+						"description": "Disables a group - this blocks ALL notifications for topics in this group."
+					},
+					"response": []
+				},
+				{
+					"name": "Enable Topic Channel - EMAIL",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"EMAIL\",\n    \"enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/topics",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "topics"]
+						},
+						"description": "Enables EMAIL channel for a specific topic. Channels: EMAIL, SMS, PUSH, IN_APP, CHAT, WHATSAPP"
+					},
+					"response": []
+				},
+				{
+					"name": "Enable Topic Channel - SMS",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"SMS\",\n    \"enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/topics",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "topics"]
+						},
+						"description": "Enables SMS channel for a specific topic."
+					},
+					"response": []
+				},
+				{
+					"name": "Disable Topic Channel - PUSH",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID for authentication"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"PUSH\",\n    \"enabled\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/topics",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "topics"]
+						},
+						"description": "Explicitly disables PUSH channel for a specific topic."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Preferences (Structured)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/preferences/users/{{customerUserId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "users", "{{customerUserId}}"]
+						},
+						"description": "Fetches all preferences for a user in a structured format:\n- Group → enabled/disabled\n- Topics under group → channel preferences for each"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Decision API Tests",
+			"item": [
+				{
+					"name": "Decision Test 1: Group Enabled + Channel Enabled → ALLOWED",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"EMAIL\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: true**\n\nConditions:\n- Group is enabled\n- EMAIL channel is enabled for this topic\n\nResult: Notification ALLOWED"
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 2: Group Enabled + Channel Disabled → BLOCKED",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"PUSH\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\nConditions:\n- Group is enabled\n- PUSH channel is explicitly disabled for this topic\n\nResult: Notification BLOCKED"
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 3: No Preference Set → BLOCKED (Default)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"WHATSAPP\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\nConditions:\n- Group is enabled\n- No preference set for WHATSAPP channel\n\nResult: Notification BLOCKED (default behavior)"
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 4: Group Disabled → BLOCKED (Override)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"EMAIL\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\n⚠️ IMPORTANT: First disable the group using 'Disable Group for Customer' request!\n\nConditions:\n- Group is DISABLED\n- EMAIL channel is enabled for this topic\n\nResult: Notification BLOCKED\n\nThis demonstrates that group-level disable overrides topic-level settings."
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 5: Invalid User → BLOCKED",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"00000000-0000-0000-0000-000000000000\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"EMAIL\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\nConditions:\n- User ID does not exist in the system\n\nResult: Notification BLOCKED (proper error handling)"
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 6: Invalid Topic → BLOCKED",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"00000000-0000-0000-0000-000000000000\",\n    \"channel\": \"EMAIL\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\nConditions:\n- Topic ID does not exist in the system\n\nResult: Notification BLOCKED (proper error handling)"
+					},
+					"response": []
+				},
+				{
+					"name": "Decision Test 7: Invalid Channel → BLOCKED",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{customerUserId}}\",\n    \"topicId\": \"{{topicId}}\",\n    \"channel\": \"TELEGRAM\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/decision",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "decision"]
+						},
+						"description": "**Expected: allowed: false**\n\nConditions:\n- Channel 'TELEGRAM' is not a valid channel\n- Valid channels: EMAIL, SMS, PUSH, IN_APP, CHAT, WHATSAPP\n\nResult: Notification BLOCKED (proper error handling)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "7. Error Cases",
+			"item": [
+				{
+					"name": "Create User without Admin Auth → 401/403",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@acme.com\",\n    \"organizationId\": \"{{orgId}}\",\n    \"role\": \"CUSTOMER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users",
+							"host": ["{{baseUrl}}"],
+							"path": ["users"]
+						},
+						"description": "Attempting to create a user without providing admin authentication.\n\nExpected: 401 Unauthorized (missing x-user-id header)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Group as Customer → 403 Forbidden",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{customerUserId}}",
+								"description": "Customer user ID (should fail)"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Unauthorized Group\",\n    \"organizationId\": \"{{orgId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/groups/create",
+							"host": ["{{baseUrl}}"],
+							"path": ["groups", "create"]
+						},
+						"description": "Attempting to create a group as a CUSTOMER (not ADMIN).\n\nExpected: 403 Forbidden"
+					},
+					"response": []
+				},
+				{
+					"name": "Duplicate Organization → 409 Conflict",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Acme Corporation\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/orgs",
+							"host": ["{{baseUrl}}"],
+							"path": ["orgs"]
+						},
+						"description": "Attempting to create an organization with a name that already exists.\n\nExpected: 409 Conflict"
+					},
+					"response": []
+				},
+				{
+					"name": "Set Preference as Admin → 403 Forbidden",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-user-id",
+								"value": "{{adminUserId}}",
+								"description": "Admin user ID (should fail - only customers can set preferences)"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"{{adminUserId}}\",\n    \"groupId\": \"{{groupId}}\",\n    \"enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/preferences/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["preferences", "groups"]
+						},
+						"description": "Attempting to set preferences as an ADMIN (only CUSTOMERS allowed).\n\nExpected: 403 Forbidden"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
